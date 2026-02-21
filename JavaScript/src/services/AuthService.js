@@ -6,6 +6,12 @@ export class AuthService {
   }
 
   async register(name, password) {
+    if (!name || name.trim() === '') {
+      throw new Error('Username cannot be empty');
+    }
+    if (!password || password.trim() === '') {
+      throw new Error('Password cannot be empty');
+    }
     const existingUser = await this.userDAO.findByName(name);
     if (existingUser) {
       throw new Error('Username already exists');

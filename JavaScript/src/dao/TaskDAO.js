@@ -34,12 +34,16 @@ export class TaskDAO {
   }
 
   async getTasksByUserId(userId) {
-    const sql = `SELECT t.*, s.display_name as status_name, c.display_name as category_name 
-                 FROM tasks t 
-                 JOIN status s ON t.status_id = s.id 
-                 JOIN category c ON t.category_id = c.id 
+    const sql = `SELECT t.id, u.name AS username, t.task_name,
+                        s.status_name AS status_name,
+                        c.category_name AS category_name,
+                        t.created_date, t.updated_date
+                 FROM tasks t
+                 LEFT JOIN status s ON t.status_id = s.id
+                 LEFT JOIN category c ON t.category_id = c.id
+                 LEFT JOIN users u ON t.user_id = u.id
                  WHERE t.user_id = $1 AND s.status_name != 'deleted'
-                 ORDER BY t.created_date DESC`;
+                 ORDER BY t.updated_date DESC`;
     const result = await query(sql, [userId]);
     return result.rows;
   }
@@ -53,23 +57,31 @@ export class TaskDAO {
   }
 
   async getTasksByStatus(userId, statusId) {
-    const sql = `SELECT t.*, s.display_name as status_name, c.display_name as category_name 
-                 FROM tasks t 
-                 JOIN status s ON t.status_id = s.id 
-                 JOIN category c ON t.category_id = c.id 
+    const sql = `SELECT t.id, u.name AS username, t.task_name,
+                        s.status_name AS status_name,
+                        c.category_name AS category_name,
+                        t.created_date, t.updated_date
+                 FROM tasks t
+                 LEFT JOIN status s ON t.status_id = s.id
+                 LEFT JOIN category c ON t.category_id = c.id
+                 LEFT JOIN users u ON t.user_id = u.id
                  WHERE t.user_id = $1 AND t.status_id = $2
-                 ORDER BY t.created_date DESC`;
+                 ORDER BY t.updated_date DESC`;
     const result = await query(sql, [userId, statusId]);
     return result.rows;
   }
 
   async getTasksByCategory(userId, categoryId) {
-    const sql = `SELECT t.*, s.display_name as status_name, c.display_name as category_name 
-                 FROM tasks t 
-                 JOIN status s ON t.status_id = s.id 
-                 JOIN category c ON t.category_id = c.id 
+    const sql = `SELECT t.id, u.name AS username, t.task_name,
+                        s.status_name AS status_name,
+                        c.category_name AS category_name,
+                        t.created_date, t.updated_date
+                 FROM tasks t
+                 LEFT JOIN status s ON t.status_id = s.id
+                 LEFT JOIN category c ON t.category_id = c.id
+                 LEFT JOIN users u ON t.user_id = u.id
                  WHERE t.user_id = $1 AND t.category_id = $2 AND s.status_name != 'deleted'
-                 ORDER BY t.created_date DESC`;
+                 ORDER BY t.updated_date DESC`;
     const result = await query(sql, [userId, categoryId]);
     return result.rows;
   }

@@ -21,7 +21,18 @@ function showMainMenu() {
 async function handleRegister() {
   console.log('\n--- Register ---');
   const username = readlineSync.question('Username: ');
+  
+  if (!username || username.trim() === '') {
+    console.log('Error: Username cannot be empty');
+    return;
+  }
+  
   const password = readlineSync.question('Password: ', { hideEchoBack: true });
+  
+  if (!password || password.trim() === '') {
+    console.log('Error: Password cannot be empty');
+    return;
+  }
   
   try {
     await authService.register(username, password);
@@ -34,7 +45,18 @@ async function handleRegister() {
 async function handleLogin() {
   console.log('\n--- Login ---');
   const username = readlineSync.question('Username: ');
+  
+  if (!username || username.trim() === '') {
+    console.log('Error: Username cannot be empty');
+    return;
+  }
+  
   const password = readlineSync.question('Password: ', { hideEchoBack: true });
+  
+  if (!password || password.trim() === '') {
+    console.log('Error: Password cannot be empty');
+    return;
+  }
   
   try {
     currentUser = await authService.login(username, password);
@@ -101,6 +123,12 @@ function showTaskMenu() {
 
 async function handleAddTask() {
   const taskName = readlineSync.question('Task name: ');
+  
+  if (!taskName || taskName.trim() === '') {
+    console.log('Error: Task name cannot be empty');
+    return;
+  }
+  
   console.log('Categories: 1=Work, 2=Leisure');
   const categoryId = readlineSync.questionInt('Category ID: ');
   
@@ -115,6 +143,11 @@ async function handleAddTask() {
 async function handleEditTask() {
   const taskId = readlineSync.questionInt('Task ID: ');
   const newName = readlineSync.question('New task name: ');
+  
+  if (!newName || newName.trim() === '') {
+    console.log('Error: Task name cannot be empty');
+    return;
+  }
   
   try {
     await taskService.editTaskName(taskId, newName, currentUser.id);
@@ -177,7 +210,10 @@ async function handleViewTasks() {
     }
     console.log('\n--- My Tasks ---');
     tasks.forEach(task => {
-      console.log(`ID: ${task.id} | ${task.task_name} | Status: ${task.status_name} | Category: ${task.category_name}`);
+      console.log(`ID: ${task.id} | User: ${task.username} | Task: ${task.task_name}`);
+      console.log(`Status: ${task.status_name} | Category: ${task.category_name}`);
+      console.log(`Created: ${new Date(task.created_date).toLocaleString()} | Updated: ${new Date(task.updated_date).toLocaleString()}`);
+      console.log('---');
     });
   } catch (error) {
     console.log(`Error: ${error.message}`);
@@ -214,7 +250,10 @@ function displayTasks(tasks) {
   }
   console.log('\n--- Filtered Tasks ---');
   tasks.forEach(task => {
-    console.log(`ID: ${task.id} | ${task.task_name} | Status: ${task.status_name} | Category: ${task.category_name}`);
+    console.log(`ID: ${task.id} | User: ${task.username} | Task: ${task.task_name}`);
+    console.log(`Status: ${task.status_name} | Category: ${task.category_name}`);
+    console.log(`Created: ${new Date(task.created_date).toLocaleString()} | Updated: ${new Date(task.updated_date).toLocaleString()}`);
+    console.log('---');
   });
 }
 

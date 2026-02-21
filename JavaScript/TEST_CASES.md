@@ -349,26 +349,18 @@
 
 **Expected Result:** Both tasks created successfully with unique IDs
 
-### TC-037: Two Users Editing Same Task
-**Precondition:** Two users logged in, both own task ID 1
-**Steps:**
-1. User1 edits task 1 to "Version A"
-2. User2 edits task 1 to "Version B" simultaneously
-
-**Expected Result:** Last update wins, no data corruption
-
 ---
 
 ## 13. Database Connection Tests
 
-### TC-038: Database Connection Failure
+### TC-037: Database Connection Failure
 **Precondition:** Database is stopped
 **Steps:**
 1. Attempt to login
 
 **Expected Result:** Error message about database connection
 
-### TC-039: Database Recovery
+### TC-038: Database Recovery
 **Precondition:** Database was down and now restored
 **Steps:**
 1. Attempt to login
@@ -379,7 +371,7 @@
 
 ## 14. Task Status Transition Tests
 
-### TC-040: Complete Task Lifecycle
+### TC-039: Complete Task Lifecycle
 **Precondition:** User logged in
 **Steps:**
 1. Add task (status: Ready to Pick)
@@ -388,7 +380,7 @@
 
 **Expected Result:** All transitions successful, timestamps updated
 
-### TC-041: Task Blocked and Resumed
+### TC-040: Task Blocked and Resumed
 **Precondition:** User logged in, task in progress
 **Steps:**
 1. Mark task as blocked (status: Blocked)

@@ -1,12 +1,25 @@
-import { describe, test, expect, beforeEach } from '@jest/globals';
+import { describe, test, expect } from '@jest/globals';
 import { AuthService } from '../src/services/AuthService.js';
 
 describe('AuthService Integration Tests', () => {
   describe('register', () => {
+    test('TC-003: should throw error for empty username', async () => {
+      const authService = new AuthService();
+      
+      await expect(authService.register('', 'password123'))
+        .rejects.toThrow('Username cannot be empty');
+    });
+
+    test('TC-003b: should throw error for empty password', async () => {
+      const authService = new AuthService();
+      
+      await expect(authService.register('testuser', ''))
+        .rejects.toThrow('Password cannot be empty');
+    });
+
     test('TC-002: should throw error for duplicate username', async () => {
       const authService = new AuthService();
       
-      // This test validates business logic without database
       const mockUserDAO = {
         findByName: async (name) => ({ id: 1, name: 'testuser1', password: 'pass' }),
         createUser: async () => {}

@@ -15,6 +15,9 @@ export class TaskService {
     if (!task || task.userId !== userId) {
       throw new Error('Task not found or unauthorized');
     }
+    if (task.statusId === 5) {
+      throw new Error('Cannot edit deleted task');
+    }
     return await this.taskDAO.updateTaskName(taskId, taskName);
   }
 
@@ -31,6 +34,9 @@ export class TaskService {
     if (!task || task.userId !== userId) {
       throw new Error('Task not found or unauthorized');
     }
+    if (task.statusId === 5) {
+      throw new Error('Cannot modify deleted task');
+    }
     const statusId = 4; // completed
     return await this.taskDAO.updateTaskStatus(taskId, statusId);
   }
@@ -40,6 +46,9 @@ export class TaskService {
     if (!task || task.userId !== userId) {
       throw new Error('Task not found or unauthorized');
     }
+    if (task.statusId === 5) {
+      throw new Error('Cannot modify deleted task');
+    }
     const statusId = 3; // blocked
     return await this.taskDAO.updateTaskStatus(taskId, statusId);
   }
@@ -48,6 +57,9 @@ export class TaskService {
     const task = await this.taskDAO.getTaskById(taskId);
     if (!task || task.userId !== userId) {
       throw new Error('Task not found or unauthorized');
+    }
+    if (task.statusId === 5) {
+      throw new Error('Cannot resume deleted task');
     }
     // Allow resume from ready_to_pick (1) or blocked (3)
     if (task.statusId !== 1 && task.statusId !== 3) {
