@@ -1,0 +1,22 @@
+{
+  "name": "todo-app-js",
+  "version": "1.0.0",
+  "description": "Collaborative To-Do List Application - JavaScript Implementation",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testTimeout=10000"
+  },
+  "keywords": ["todo", "cli", "postgresql"],
+  "author": "Tanmayee Swathi Moganti",
+  "license": "MIT",
+  "dependencies": {
+    "pg": "^8.11.3",
+    "readline-sync": "^1.4.10"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "@jest/globals": "^29.7.0"
+  }
+}
