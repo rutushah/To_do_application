@@ -1,0 +1,532 @@
+Group Project: Cross-Language Application Development 
+
+Team Members 7: Rutu Ketankumar Shah,  
+
+Monica Pasupuleti,  
+
+Tanmayee Swathi Moganti 
+
+University of Cumberlands 
+
+MSCS-632-M20- Advanced Programming Languages 
+
+Professor: Dr Jay Thom 
+
+02/20/2026 
+
+ 
+
+Abstract 
+
+This cross-language application design document specifies a collaborative to-do list application implemented in two different programming languages namely Java and JavaScript using a command-line interface. The system supports multi-user registration/login, task creation, updates, deletion, assignment, categorization, status tracking, timestamps, filtering, and simulated concurrent access. The Java version emphasizes object-oriented design and thread-based concurrency controls. The JavaScript version emphasizes asynchronous workflows (Promises/async-await) and JSON-based persistence. The document outlines architecture, core components, data models, concurrency approach, APIs/commands, class design, roles, and project timeline. 
+
+1. Application Overview and Scope 
+
+1.1 Problem Statement 
+
+Developed a command-line collaborative to-do list application supporting multiple users with shared access to tasks while maintaining user-specific views. The system must support categorization, status tracking, timestamps, and concurrency (multi-user access/edit). 
+
+1.2 Core Features (Both Implementations) 
+
+User registration and login 
+
+Add task (create) 
+
+Update task 
+
+Remove task 
+
+Assign task to a user 
+
+Mark task completion 
+
+View tasks list with their specific user login details. 
+
+Support concurrent tasks 
+
+Timestamps for created/updated actions 
+
+Filter tasks by status. 
+
+1.3 Non-Functional Requirements 
+
+Concurrency-safe edits (avoid inconsistent updates). 
+
+Integrated using postgresql 
+
+Audit-friendly timestamps (createdAt, updatedAt). 
+
+Clear CLI UX (help, validation messages). 
+
+2. Architecture and Design (High Level) 
+
+2.1 Common Architecture Pattern 
+
+Layered architecture (applies to both): 
+
+Presentation Layer: CLI commands, input parsing, output formatting 
+
+Service Layer: business logic (validation, assignment rules, filtering) 
+
+Data Access Layer (DAO/Repository): PostgreSQL 
+
+Domain Models: Users, Tasks, Category, Status 
+
+2.2 Database Design and Data Model 
+
+To support collaborative task management and ensure structured data storage across both Java and JavaScript implementations, the system is integrated with a PostgreSQL relational database consisting of four primary entities: Users, Tasks, Status, and Category. These entities maintain referential integrity using primary and foreign key constraints. 
+
+Application Components: 
+
+Component 
+
+Responsibility 
+
+CLI Interface 
+
+Main menu, prompts, input validation, help messages, navigation 
+
+User Module 
+
+Create, list, and manage users 
+
+Task Module 
+
+Create, update, complete, delete tasks; assign users and categories; status updates 
+
+Status Module 
+
+Track task status (ready_to_pick, in_progress, blocked, completed, deleted) 
+
+Category Module 
+
+Manage task categories (Work, Personal, etc.) 
+
+Storage / DB Module 
+
+Read/write data from PostgreSQL (or JSON for simpler CLI); ensure concurrency safety 
+
+2.2.1 Users Table 
+
+The Users table stores the details of registered users who interact with the application and are responsible for task creation, assignment, and completion. 
+
+Column Name 
+
+Data Type 
+
+Description 
+
+id 
+
+Integer (PK) 
+
+Unique identifier for the user 
+
+name 
+
+Varchar 
+
+Username of the registered user 
+
+password 
+
+Varchar 
+
+Password associated with the user 
+
+created_date 
+
+Timestamp 
+
+Record creation timestamp 
+
+ 
+
+CREATE TABLE users ( 
+  id SERIAL PRIMARY KEY, 
+  name VARCHAR(100) NOT NULL UNIQUE, 
+  password VARCHAR(255) NOT NULL, 
+  created_date TIMESTAMP NOT NULL DEFAULT NOW() 
+); 
+
+2.2.2 Status Table 
+
+The Status table maintains the lifecycle state of each task within the application workflow. 
+
+Column Name 
+
+Data Type 
+
+Description 
+
+id 
+
+Integer (PK) 
+
+Unique identifier for task status 
+
+status_name 
+
+Varchar 
+
+Status of the task ('ready_to_pick', 'in_progress', 'blocked', 'completed', 'deleted') 
+
+display_name 
+
+Varchar 
+
+Display value we use in cli to pretty format 
+
+ 
+
+CREATE TABLE status ( 
+    id SERIAL PRIMARYKEY, 
+    status_name VARCHAR(50) UNIQUENOTNULL, 
+    display_name VARCHAR(100) -- optional, user-facing label 
+); 
+
+2.2.3 Category Table 
+
+The Category table enables classification of tasks for better filtering and organization. 
+
+Column Name 
+
+Data Type 
+
+Description 
+
+category_id 
+
+Integer (PK) 
+
+Unique identifier for task category 
+
+category_name 
+
+Varchar 
+
+Name of task category - ('work', 'leisure') 
+
+display_name 
+
+Varchar 
+
+Display value we use in cli to pretty format 
+
+ 
+
+CREATE TABLE category ( 
+    id SERIAL PRIMARYKEY, 
+    category_name VARCHAR(50) UNIQUENOTNULL,    
+    display_name VARCHAR(100)                   
+); 
+
+2.2.4 Tasks Table 
+
+The Tasks table contains task-specific information and is linked with Users, Status, and Category through foreign key relationships. 
+
+Column Name 
+
+Data Type 
+
+Description 
+
+id 
+
+Integer (PK) 
+
+Unique identifier for task 
+
+task_name 
+
+Varchar 
+
+Name of the task 
+
+status_id 
+
+Integer (FK) 
+
+References Status(id) 
+
+user_id 
+
+Integer (FK) 
+
+References Users(id) 
+
+category_id 
+
+Integer (FK) 
+
+References Category(category_id) 
+
+created_date 
+
+Timestamp 
+
+Record creation timestamp 
+
+updated_date 
+
+Timestamp 
+
+Record last update timestamp 
+
+ 
+
+CREATE TABLE tasks ( 
+  id SERIAL PRIMARY KEY, 
+  task_name VARCHAR(200) NOT NULL, 
+  status_id INT NOT NULL REFERENCES status(id), 
+  user_id INT NOT NULL REFERENCES users(id), 
+  category_id INT NOT NULL REFERENCES category(category_id), 
+  created_date TIMESTAMP NOT NULL DEFAULT NOW(), 
+  updated_date TIMESTAMP NOT NULL DEFAULT NOW() 
+); 
+
+2.2.5 Entity Relationships 
+
+One User can be assigned multiple Tasks. 
+
+One Category can contain multiple Tasks. 
+
+One Status can be applied to multiple Tasks. 
+
+This relational design supports: 
+
+User-specific task visibility 
+
+Status-based task filtering 
+
+Category-based organization 
+
+Concurrent updates with referential consistency 
+
+ 
+
+2.2.6 Status Transition Rules 
+
+The task lifecycle is governed by the following status transitions: 
+
+Status Table 
+
+Status Name 
+
+Display Name 
+
+Description 
+
+ready_to_pick 
+
+Ready to Pick 
+
+Task has just been created and is available to be picked up by a user. 
+
+in_progress 
+
+In Progress 
+
+Task is actively being worked on by a user. 
+
+blocked 
+
+Blocked 
+
+Task cannot proceed due to a dependency or issue. 
+
+completed 
+
+Completed 
+
+Task has been finished successfully. 
+
+deleted 
+
+Deleted 
+
+Task has been removed from active workflow  
+
+Task Operations → Status Mapping 
+
+Task Operation 
+
+Status After Operation 
+
+Notes 
+
+Create Task 
+
+ready_to_pick 
+
+Task is new and ready to be assigned. 
+
+Update Task 
+
+in_progress (optional) or keep original status 
+
+If changes are made while work is ongoing, consider keeping the status in-progress or note modification separately. 
+
+Start / Work on Task 
+
+in_progress 
+
+When a user picks up the task for execution. 
+
+Block Task 
+
+blocked 
+
+Task cannot continue due to external dependency or issue. 
+
+Complete Task 
+
+completed 
+
+Task is finished. 
+
+Remove Task 
+
+deleted 
+
+Task is deleted from active view. 
+
+Visual Task Flow  
+
+[ready_to_pick]  
+
+       │ 
+
+       ├─> User starts work → [in_progress] 
+
+       │                       │ 
+
+       │                       ├─> Completed → [completed] 
+
+       │                       │ 
+
+       │                       └─> Blocked → [blocked] ──> Resumed → [in_progress] 
+
+       │ 
+
+       └─> Deleted → [deleted] 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+ 
+
+2.2.7 High Level Components 
+
+3. Project Deliverables 
+
+3.1 Implementation Strategy 
+
+Both Java and JavaScript implementations will utilize the same PostgreSQL database schema consisting of Users, Tasks, Status, and Category tables to maintain consistency across platforms. Each application will independently interact with the shared relational database through its respective data access mechanism. 
+
+The Java implementation will utilize JDBC-based DAO classes to perform CRUD operations on database entities, while the JavaScript implementation will interact with PostgreSQL using asynchronous database queries through Node.js. 
+
+During runtime, the CLI interface will allow authenticated users to perform task-related operations such as creation, assignment, status updates, and deletion. All task operations will result in database transactions ensuring persistent storage and audit logging through timestamp updates. 
+
+3.2 Concurrency Planning 
+
+Since the application supports collaborative task operations by multiple users, concurrency handling is required to prevent inconsistent updates to shared task records. 
+
+In the Java implementation, concurrency will be simulated using multiple threads attempting to access and modify shared task data simultaneously. Thread synchronization mechanisms will be applied during database update operations to prevent race conditions. 
+
+In the JavaScript implementation, concurrency will be simulated through asynchronous execution using Promises and async-await functions. Database transactions will be executed sequentially to maintain data integrity during concurrent task updates. 
+
+3.3 Database Interaction Plan 
+
+Each application will perform the following database operations: 
+
+Insert new user records during registration 
+
+Insert task records during task creation 
+
+Update task status during modification or completion 
+
+Update task ownership during assignment 
+
+tasks by updating status to DELETED 
+
+Retrieve filtered task lists based on user_id, status_id, or category_id 
+
+Foreign key relationships between Tasks, Users, Status, and Category tables will ensure referential consistency during these operations. 
+
+3.4 GitHub Repository Setup 
+
+A centralized GitHub repository will be used to maintain version control for both implementations. Separate project directories will be maintained for Java and JavaScript CLI applications. 
+
+https://github.com/rutushah/To_do_application 
+
+Each team member will work on designated modules through individual feature branches before merging changes into the main branch. 
+
+3.5 Task Assignment 
+
+Team Member 
+
+Responsibility 
+
+Rutu Ketankumar Shah 
+
+Java Application Development  
+
+Monica Pasupuleti 
+
+JavaScript Task Module 
+
+Tanmayee Swathi Moganti 
+
+JavaScript Authentication & Filtering 
+
+All team members will jointly contribute towards testing, documentation, and final comparison analysis. 
+
+3.6 Timeline Creation 
+
+Date 
+
+Milestone 
+
+Description 
+
+20-Feb-26 
+
+Design Document Completion 
+
+Completion of initial planning and design document including system architecture, database schema, and implementation strategy. 
+
+21-Feb-26 
+
+Development & Unit Testing 
+
+Implementation of core application functionalities such as user authentication, task creation, assignment, status updates, and database integration for both Java and JavaScript applications along with unit testing. 
+
+22-Feb-26 
+
+Final Testing & Documentation 
+
+Completion of remaining features, concurrency simulation, integration testing, documentation preparation, and comparison report for final project submission. 
+
+ 
+
+4. Documentation of Design 
+
+The application design has been documented to outline the planned system structure, supported features, and implementation approach for both Java and JavaScript-based command-line applications. The system is designed to support user authentication, task creation, task assignment, status updates, task categorization, filtering, and concurrent access by multiple users. 
+
+Each application will interact with a shared PostgreSQL database consisting of Users, Tasks, Status, and Category tables. Task operations such as creation, modification, completion, and deletion will be reflected through status transitions stored within the Status table. Timestamp fields will be maintained for auditing task creation and update activities. 
+
+The Java implementation will follow an object-oriented programming approach using domain classes such as User, Task, Category, and Status along with DAO classes for database interaction. Concurrency will be simulated using multi-threading to allow multiple users to perform task operations simultaneously. Thread synchronization techniques will be required to prevent race conditions and ensure consistent database updates. 
+
+The JavaScript implementation will utilize asynchronous programming techniques including Promises and async-await functions to simulate concurrent access to task data. Node.js-based database queries will be executed to interact with PostgreSQL. Sequential execution of asynchronous operations will be required to maintain data integrity during concurrent task modifications. 
+
+Some anticipated language-specific challenges include managing thread safety in Java during simultaneous database updates and preventing asynchronous execution conflicts in JavaScript while handling concurrent task operations. These challenges will be addressed through appropriate concurrency handling techniques in each respective implementation. 
