@@ -102,12 +102,14 @@ Java's static typing provides compile-time type checking, preventing type-relate
 **Java (JDBC):**
 ```java
 public class DB {
-    private static final String URL = "jdbc:postgresql://localhost:5432/todo_app";
-    private static final String USER = "todoappuser";
-    private static final String PASSWORD = "todo_pwd";
 
-    public static Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(URL, USER, PASSWORD);
+    private static String jdbcURL = System.getProperty("TODO_DB_URL","jdbc:postgresql://localhost:5432/todo_app");
+    private static String username = System.getProperty("TODO_DB_USER", "rutushah");
+    private static String password = System.getProperty("TODO_DB_PASS", "todo_pwd");
+
+    public static Connection getConnection() throws SQLException{
+        Connection c = DriverManager.getConnection(jdbcURL, username, password);
+        return c;
     }
 }
 ```
@@ -268,14 +270,23 @@ Java enforces exception handling through checked exceptions, requiring explicit 
 ### 6.1 Java Testing (JUnit + Testcontainers)
 
 ```java
-@Test
-void testAddTask() throws Exception {
-    User user = authService.register("testuser", "password");
-    Task task = taskService.addTask("Test Task", user.getId(), "work");
-    
-    assertNotNull(task);
-    assertEquals("Test Task", task.getTaskName());
-}
+ @Test
+    @Order(3)
+    void addTask_success_shouldSaveCategoryAndStatusNames() throws Exception {
+        User u = authService.login("rutu_test", "pass123");
+
+        taskService.addTask("Finish assignment", u.getId(), "work");
+
+        List<Task> tasks = taskService.viewMyTasks(u.getId());
+        assertFalse(tasks.isEmpty());
+
+        Task t = tasks.get(0);
+        assertEquals("Finish assignment", t.getTask_name());
+        assertEquals("work", t.getCategoryName());
+        assertEquals("ready_to_pick", t.getStatusName());
+        assertNotNull(t.getCreatedDate());
+        assertNotNull(t.getUpdatedDate());
+    }
 ```
 
 Java testing utilizes:
@@ -320,18 +331,19 @@ The testing approaches reflect language characteristics: Java's compile-time typ
 
 **Java (Maven - pom.xml):**
 ```xml
-<dependencies>
-    <dependency>
-        <groupId>org.postgresql</groupId>
-        <artifactId>postgresql</artifactId>
-        <version>42.7.10</version>
-    </dependency>
-    <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter</artifactId>
-        <scope>test</scope>
-    </dependency>
-</dependencies>
+ <!-- Postgres driver -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.7.10</version>
+        </dependency>
+
+        <!-- JUnit (API + Engine) -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
 ```
 
 **JavaScript (npm - package.json):**
