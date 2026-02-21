@@ -17,7 +17,7 @@ public class TaskCli {
             System.out.println("\n=== Task Menu (User: " + loggedInUser.getName() + ") ===");
             System.out.println("1) Add Task");
             System.out.println("2) Edit Task Name");
-            System.out.println("3) Start Task (assign to myself)");
+            System.out.println("3) Start/Resume Task");
             System.out.println("4) Mark Completed");
             System.out.println("5) Mark Blocked");
             System.out.println("6) Delete Task");
