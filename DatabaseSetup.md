@@ -40,22 +40,19 @@ sudo systemctl enable postgresql
 
 ### Create Database User and Database
 ```bash
-# Switch to postgres user (Linux/macOS)
-sudo -u postgres psql
-
-# Or connect directly (if no sudo needed)
-psql postgres
+# Connect to PostgreSQL as postgres user
+psql -U postgres
 ```
 
 ```sql
--- Create a new user for the todo app
-CREATE USER todo_user WITH PASSWORD 'your_password';
+-- Create the user
+CREATE USER todoappuser WITH PASSWORD 'todo_pwd';
 
--- Create the todo database
-CREATE DATABASE todo_app OWNER todo_user;
+-- Create the database
+CREATE DATABASE todo_app OWNER todoappuser;
 
 -- Grant privileges
-GRANT ALL PRIVILEGES ON DATABASE todo_app TO todo_user;
+GRANT ALL PRIVILEGES ON DATABASE todo_app TO todoappuser;
 
 -- Exit PostgreSQL
 \q
@@ -64,97 +61,100 @@ GRANT ALL PRIVILEGES ON DATABASE todo_app TO todo_user;
 ## 3. Connect to Todo Database
 
 ```bash
-# Connect to the todo_app database
-psql -U todo_user -d todo_app -h localhost
+# Connect as the new user
+psql -U todoappuser -d todo_app
 ```
 
 ## 4. Todo Application Table Setup
 
-### Create Todos Table
+### Create Status Table
 ```sql
--- Create todos table
-CREATE TABLE todos (
+-- Create status table
+CREATE TABLE status (
     id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    completed BOOLEAN DEFAULT FALSE,
-    priority VARCHAR(20) DEFAULT 'medium' CHECK (priority IN ('low', 'medium', 'high')),
-    due_date DATE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    status_name VARCHAR(50) UNIQUE NOT NULL,
+    display_name VARCHAR(100)
 );
-
--- Create index for better query performance
-CREATE INDEX idx_todos_completed ON todos(completed);
-CREATE INDEX idx_todos_due_date ON todos(due_date);
-CREATE INDEX idx_todos_priority ON todos(priority);
 ```
 
-### Create Categories Table (Optional)
+### Create Category Table
 ```sql
--- Create categories table
-CREATE TABLE categories (
+-- Create category table
+CREATE TABLE category (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    color VARCHAR(7) DEFAULT '#007bff',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    category_name VARCHAR(50) UNIQUE NOT NULL,
+    display_name VARCHAR(100)
 );
-
--- Add category reference to todos table
-ALTER TABLE todos ADD COLUMN category_id INTEGER REFERENCES categories(id);
-CREATE INDEX idx_todos_category ON todos(category_id);
 ```
 
-### Create Users Table (Optional - for multi-user support)
+### Create Users Table
 ```sql
 -- Create users table
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    name VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_date TIMESTAMP NOT NULL DEFAULT NOW()
 );
-
--- Add user reference to todos table
-ALTER TABLE todos ADD COLUMN user_id INTEGER REFERENCES users(id);
-CREATE INDEX idx_todos_user ON todos(user_id);
 ```
 
-### Update Trigger for updated_at
+### Create Tasks Table
+```sql
+-- Create tasks table
+CREATE TABLE tasks (
+    id SERIAL PRIMARY KEY,
+    task_name VARCHAR(200) NOT NULL,
+    status_id INT NOT NULL REFERENCES status(id),
+    user_id INT NOT NULL REFERENCES users(id),
+    category_id INT NOT NULL REFERENCES category(id),
+    created_date TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_date TIMESTAMP NOT NULL DEFAULT NOW()
+);
+```
+
+### Create Indexes
+```sql
+-- Create indexes for better query performance
+CREATE INDEX idx_tasks_status ON tasks(status_id);
+CREATE INDEX idx_tasks_user ON tasks(user_id);
+CREATE INDEX idx_tasks_category ON tasks(category_id);
+CREATE INDEX idx_tasks_created_date ON tasks(created_date);
+CREATE INDEX idx_tasks_updated_date ON tasks(updated_date);
+```
+
+### Update Trigger for updated_date
 ```sql
 -- Create function to update timestamp
-CREATE OR REPLACE FUNCTION update_updated_at_column()
+CREATE OR REPLACE FUNCTION update_updated_date_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
+    NEW.updated_date = NOW();
     RETURN NEW;
 END;
 $$ language 'plpgsql';
 
--- Create trigger for todos table
-CREATE TRIGGER update_todos_updated_at 
-    BEFORE UPDATE ON todos 
+-- Create trigger for tasks table
+CREATE TRIGGER update_tasks_updated_date 
+    BEFORE UPDATE ON tasks 
     FOR EACH ROW 
-    EXECUTE FUNCTION update_updated_at_column();
+    EXECUTE FUNCTION update_updated_date_column();
 ```
 
-## 5. Sample Data Insertion
+## 5. Insert Default Data
 
 ```sql
--- Insert sample categories
-INSERT INTO categories (name, color) VALUES 
-    ('Work', '#ff6b6b'),
-    ('Personal', '#4ecdc4'),
-    ('Shopping', '#45b7d1'),
-    ('Health', '#96ceb4');
+-- Insert default statuses
+INSERT INTO status (status_name, display_name) VALUES
+('ready_to_pick', 'Ready to Pick'),
+('in_progress', 'In Progress'),
+('blocked', 'Blocked'),
+('completed', 'Completed'),
+('deleted', 'Deleted');
 
--- Insert sample todos
-INSERT INTO todos (title, description, completed, priority, due_date, category_id) VALUES 
-    ('Complete project proposal', 'Finish the Q4 project proposal document', false, 'high', '2024-01-15', 1),
-    ('Buy groceries', 'Milk, bread, eggs, vegetables', false, 'medium', '2024-01-10', 3),
-    ('Exercise', 'Go for a 30-minute run', false, 'low', '2024-01-09', 4),
-    ('Team meeting', 'Weekly standup with development team', true, 'medium', '2024-01-08', 1);
+-- Insert default categories
+INSERT INTO category (category_name, display_name) VALUES
+('work', 'Work'),
+('leisure', 'Leisure');
 ```
 
 ## 6. Useful PostgreSQL Commands
@@ -164,22 +164,36 @@ INSERT INTO todos (title, description, completed, priority, due_date, category_i
 \dt
 
 -- Describe table structure
-\d todos
+\d tasks
 
--- View all todos
-SELECT * FROM todos;
+-- View all tasks
+SELECT * FROM tasks;
 
--- View todos with categories
-SELECT t.*, c.name as category_name 
-FROM todos t 
-LEFT JOIN categories c ON t.category_id = c.id;
+-- View tasks with details
+SELECT 
+    t.id,
+    t.task_name,
+    s.display_name as status,
+    u.name as user_name,
+    c.display_name as category,
+    t.created_date,
+    t.updated_date
+FROM tasks t
+JOIN status s ON t.status_id = s.id
+JOIN users u ON t.user_id = u.id
+JOIN category c ON t.category_id = c.id;
 
--- Count todos by status
-SELECT completed, COUNT(*) FROM todos GROUP BY completed;
+-- Count tasks by status
+SELECT s.display_name, COUNT(*) 
+FROM tasks t
+JOIN status s ON t.status_id = s.id
+GROUP BY s.display_name;
 
--- Find overdue todos
-SELECT * FROM todos 
-WHERE due_date < CURRENT_DATE AND completed = false;
+-- View tasks by user
+SELECT u.name, COUNT(*) as task_count
+FROM tasks t
+JOIN users u ON t.user_id = u.id
+GROUP BY u.name;
 ```
 
 ## 7. Environment Configuration
@@ -190,21 +204,21 @@ WHERE due_date < CURRENT_DATE AND completed = false;
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=todo_app
-DB_USER=todo_user
-DB_PASSWORD=your_password
-DB_URL=postgresql://todo_user:your_password@localhost:5432/todo_app
+DB_USER=todoappuser
+DB_PASSWORD=todo_pwd
+DB_URL=postgresql://todoappuser:todo_pwd@localhost:5432/todo_app
 ```
 
 ## 8. Backup and Restore
 
 ### Backup database
 ```bash
-pg_dump -U todo_user -h localhost todo_app > todo_app_backup.sql
+pg_dump -U todoappuser -h localhost todo_app > todo_app_backup.sql
 ```
 
 ### Restore database
 ```bash
-psql -U todo_user -h localhost todo_app < todo_app_backup.sql
+psql -U todoappuser -h localhost todo_app < todo_app_backup.sql
 ```
 
 ## 9. Common Issues and Solutions
@@ -221,10 +235,10 @@ psql -U todo_user -h localhost todo_app < todo_app_backup.sql
 
 ```sql
 -- Analyze table statistics
-ANALYZE todos;
+ANALYZE tasks;
 
 -- Vacuum table
-VACUUM todos;
+VACUUM tasks;
 ```
 
 ## Next Steps
