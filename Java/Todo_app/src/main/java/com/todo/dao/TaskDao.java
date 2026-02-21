@@ -81,7 +81,6 @@ public class TaskDao {
         }
     }
 
-    // ✅ View tasks with username + status_name + category_name + timestamps
     public List<Task> listByUser(int userId) throws Exception {
         String sql =
                 "SELECT t.id, u.name AS username, t.task_name, " +
@@ -108,7 +107,6 @@ public class TaskDao {
         }
     }
 
-    // ✅ Filter by status_name and category_name (NOT IDs)
     public List<Task> filterByNames(int userId, String statusName, String categoryName) throws Exception {
 
         StringBuilder sb = new StringBuilder(
@@ -153,7 +151,6 @@ public class TaskDao {
         }
     }
 
-    // ✅ IMPORTANT: matches your Task constructor order exactly
     private Task map(ResultSet rs) throws Exception {
         Timestamp createdTs = rs.getTimestamp("created_date");
         Timestamp updatedTs = rs.getTimestamp("updated_date");
@@ -171,4 +168,70 @@ public class TaskDao {
                 updated                          // updatedDate
         );
     }
+
+    public boolean isTaskOwnedBy(int taskId, int userId) throws Exception {
+        String sql = "SELECT 1 FROM tasks WHERE id = ? AND user_id = ?";
+        try (Connection c = DB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, taskId);
+            ps.setInt(2, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    public List<Task> listStartableTasksByUser(int userId) throws Exception {
+        String sql =
+                "SELECT t.id, u.name AS username, t.task_name, " +
+                        "       s.status_name AS status_name, " +
+                        "       c.category_name AS category_name, " +
+                        "       t.created_date, t.updated_date " +
+                        "FROM tasks t " +
+                        "LEFT JOIN status s ON t.status_id = s.id " +
+                        "LEFT JOIN category c ON t.category_id = c.id " +
+                        "LEFT JOIN users u ON t.user_id = u.id " +
+                        "WHERE t.user_id = ? " +
+                        "  AND s.status_name IN ('ready_to_pick', 'blocked') " +
+                        "ORDER BY t.updated_date DESC";
+
+        try (Connection c = DB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                List<Task> out = new ArrayList<>();
+                while (rs.next()) out.add(map(rs));
+                return out;
+            }
+        }
+    }
+
+    public List<Task> listActiveByUser(int userId) throws Exception {
+        String sql =
+                "SELECT t.id, u.name AS username, t.task_name, " +
+                        "       s.status_name AS status_name, " +
+                        "       c.category_name AS category_name, " +
+                        "       t.created_date, t.updated_date " +
+                        "FROM tasks t " +
+                        "LEFT JOIN status s ON t.status_id = s.id " +
+                        "LEFT JOIN category c ON t.category_id = c.id " +
+                        "LEFT JOIN users u ON t.user_id = u.id " +
+                        "WHERE t.user_id = ? " +
+                        "  AND s.status_name <> 'deleted' " +
+                        "ORDER BY t.updated_date DESC";
+
+        try (Connection c = DB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            ps.setInt(1, userId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                List<Task> out = new ArrayList<>();
+                while (rs.next()) out.add(map(rs));
+                return out;
+            }
+        }
+    }
+
 }

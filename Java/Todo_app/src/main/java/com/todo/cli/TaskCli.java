@@ -4,6 +4,7 @@ import com.todo.model.Task;
 import com.todo.model.User;
 import com.todo.service.TaskService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -16,7 +17,7 @@ public class TaskCli {
             System.out.println("\n=== Task Menu (User: " + loggedInUser.getName() + ") ===");
             System.out.println("1) Add Task");
             System.out.println("2) Edit Task Name");
-            System.out.println("3) Assign Task to Another User");
+            System.out.println("3) Start Task (assign to myself)");
             System.out.println("4) Mark Completed");
             System.out.println("5) Mark Blocked");
             System.out.println("6) Delete Task");
@@ -30,11 +31,11 @@ public class TaskCli {
             try {
                 switch (choice) {
                     case "1" -> addTask(loggedInUser);
-                    case "2" -> editTask();
-                    case "3" -> assignTask();
-                    case "4" -> markCompleted();
-                    case "5" -> markBlocked();
-                    case "6" -> deleteTask();
+                    case "2" -> editTask(loggedInUser);
+                    case "3" -> startTask(loggedInUser);
+                    case "4" -> markCompleted(loggedInUser);
+                    case "5" -> markBlocked(loggedInUser);
+                    case "6" -> deleteTask(loggedInUser);
                     case "7" -> viewMyTasks(loggedInUser);
                     case "8" -> filterMyTasks(loggedInUser);
                     case "0" -> { return; }
@@ -51,58 +52,152 @@ public class TaskCli {
         System.out.print("Task name: ");
         String taskName = sc.nextLine().trim();
 
-        System.out.print("Category name (e.g., work/leisure): ");
+        //show available categories
+        List<String> categories = taskService.getAllCategoryNames();
+        System.out.println("\nAvailable categories:");
+        for (String c : categories) {
+            System.out.println(" - " + c);
+        }
+
+        System.out.print("\nCategory name (type exactly as above): ");
         String categoryName = sc.nextLine().trim();
 
         taskService.addTask(taskName, u.getId(), categoryName);
 
-        System.out.println("✅ Task added.");
+        System.out.println("Task added Successfully!!!.");
     }
 
-    private void editTask() throws Exception {
-        System.out.print("Task id: ");
-        int taskId = Integer.parseInt(sc.nextLine().trim());
+    private void editTask(User u) throws Exception {
+        // 1) Show tasks first
+        List<Task> tasks = taskService.viewMyTasks(u.getId());
 
+        if (tasks.isEmpty()) {
+            System.out.println("(No tasks found to edit)");
+            return;
+        }
+
+        System.out.println("\n--- My Tasks (choose a task to edit) ---");
+        for (int i = 0; i < tasks.size(); i++) {
+            Task t = tasks.get(i);
+            System.out.println((i + 1) + ") [" + t.getId() + "] " + t.getTask_name()
+                    + " | Status=" + t.getStatusName()
+                    + " | Category=" + t.getCategoryName());
+        }
+
+        // 2) Choose by list number (friendlier than ID)
+        System.out.print("\nEnter task number to edit (1-" + tasks.size() + "): ");
+        String input = sc.nextLine().trim();
+
+        int choiceNum;
+        try {
+            choiceNum = Integer.parseInt(input);
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid input. Please enter a number.");
+            return;
+        }
+
+        if (choiceNum < 1 || choiceNum > tasks.size()) {
+            System.out.println("Invalid choice. Please select between 1 and " + tasks.size());
+            return;
+        }
+
+        Task selected = tasks.get(choiceNum - 1);
+
+        // 3) Ask new name
+        System.out.println("Selected: " + selected.getTask_name());
         System.out.print("New task name: ");
         String newName = sc.nextLine().trim();
 
-        taskService.editTask(taskId, newName);
-        System.out.println("✅ Task updated.");
+        if (newName.isEmpty()) {
+            System.out.println("Task name cannot be empty.");
+            return;
+        }
+
+        // 4) Update
+        taskService.editTask(selected.getId(),  newName);
+        System.out.println("Task updated Successfully!!!.");
     }
 
-    private void assignTask() throws Exception {
-        System.out.print("Task id: ");
-        int taskId = Integer.parseInt(sc.nextLine().trim());
+    private void startTask(User u) throws Exception {
 
-        System.out.print("Assign to userId: ");
-        int assigneeUserId = Integer.parseInt(sc.nextLine().trim());
+        List<Task> tasks = taskService.getStartableTasks(u.getId());
 
-        taskService.assignTask(taskId, assigneeUserId);
-        System.out.println("✅ Task assigned.");
+        if (tasks.isEmpty()) {
+            System.out.println("(No startable tasks. Only ready_to_pick or blocked tasks can be started.)");
+            return;
+        }
+
+        System.out.println("\n--- Start Task (Ready to Pick / Blocked) ---");
+        for (int i = 0; i < tasks.size(); i++) {
+            Task t = tasks.get(i);
+            System.out.println((i + 1) + ") " + t.getTask_name()
+                    + " | Status=" + t.getStatusName()
+                    + " | Category=" + t.getCategoryName());
+        }
+
+        System.out.print("\nChoose task number to start (1-" + tasks.size() + "): ");
+        String input = sc.nextLine().trim();
+
+        int pick;
+        try {
+            pick = Integer.parseInt(input);
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid input. Please enter a number.");
+            return;
+        }
+
+        if (pick < 1 || pick > tasks.size()) {
+            System.out.println("Invalid choice.");
+            return;
+        }
+
+        Task selected = tasks.get(pick - 1);
+
+        // Start task = set status to in_progress (no userId input needed)
+        taskService.startTask(selected.getId(), u.getId());
+
+        System.out.println("✅ Started: " + selected.getTask_name() + " (Status set to in_progress)");
     }
 
-    private void markCompleted() throws Exception {
-        System.out.print("Task id: ");
-        int taskId = Integer.parseInt(sc.nextLine().trim());
+    private void markCompleted(User u) throws Exception {
+        List<Task> tasks = taskService.getActiveTasks(u.getId());
 
-        taskService.markCompleted(taskId);
-        System.out.println("✅ Marked completed.");
-    }
-    private void markBlocked() throws Exception {
-        System.out.print("Task id: ");
-        int taskId = Integer.parseInt(sc.nextLine().trim());
+        Task selected = pickTaskFromList(tasks, "Mark Completed");
+        if (selected == null) return;
 
-        taskService.markBlocked(taskId);
-        System.out.println("✅ Marked blocked.");
+        taskService.markCompleted(selected.getId(), u.getId());
+        System.out.println("✅ Marked completed: " + selected.getTask_name());
     }
 
-    private void deleteTask() throws Exception {
-        System.out.print("Task id: ");
-        int taskId = Integer.parseInt(sc.nextLine().trim());
 
-        taskService.deleteTask(taskId);
-        System.out.println("✅ Task deleted (soft delete).");
+    private void markBlocked(User u) throws Exception {
+        List<Task> tasks = taskService.getActiveTasks(u.getId());
+
+        Task selected = pickTaskFromList(tasks, "Mark Blocked");
+        if (selected == null) return;
+
+        taskService.markBlocked(selected.getId(), u.getId());
+        System.out.println("✅ Marked blocked: " + selected.getTask_name());
     }
+
+    private void deleteTask(User u) throws Exception {
+        List<Task> tasks = taskService.getActiveTasks(u.getId());
+
+        Task selected = pickTaskFromList(tasks, "Delete Task");
+        if (selected == null) return;
+
+        System.out.print("Are you sure you want to delete '" + selected.getTask_name() + "'? (y/n): ");
+        String confirm = sc.nextLine().trim().toLowerCase();
+        if (!confirm.equals("y")) {
+            System.out.println("Cancelled.");
+            return;
+        }
+
+        taskService.deleteTask(selected.getId(), u.getId());
+        System.out.println("✅ Task deleted (soft delete): " + selected.getTask_name());
+    }
+
+
     private void viewMyTasks(User u) throws Exception {
         List<Task> tasks = taskService.viewMyTasks(u.getId());
 
@@ -153,5 +248,39 @@ public class TaskCli {
                             + "Updated=" + t.getUpdatedDate()
             );
         }
+    }
+
+
+    private Task pickTaskFromList(List<Task> tasks, String title) {
+        if (tasks == null || tasks.isEmpty()) {
+            System.out.println("(No tasks found)");
+            return null;
+        }
+
+        System.out.println("\n--- " + title + " ---");
+        for (int i = 0; i < tasks.size(); i++) {
+            Task t = tasks.get(i);
+            System.out.println((i + 1) + ") " + t.getTask_name()
+                    + " | Status=" + t.getStatusName()
+                    + " | Category=" + t.getCategoryName());
+        }
+
+        System.out.print("\nChoose task number (1-" + tasks.size() + "): ");
+        String input = sc.nextLine().trim();
+
+        int pick;
+        try {
+            pick = Integer.parseInt(input);
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid input. Please enter a number.");
+            return null;
+        }
+
+        if (pick < 1 || pick > tasks.size()) {
+            System.out.println("Invalid choice.");
+            return null;
+        }
+
+        return tasks.get(pick - 1);
     }
 }

@@ -57,4 +57,19 @@ public class CategoryDao {
         }
         throw new IllegalArgumentException("Category not found: " + category_name);
     }
+
+    public List<String> listCategoryNames() throws Exception {
+        String sql = "SELECT category_name FROM category ORDER BY category_name";
+        List<String> names = new ArrayList<>();
+
+        try (Connection c = DB.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                names.add(rs.getString("category_name"));
+            }
+        }
+        return names;
+    }
 }
