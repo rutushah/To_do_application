@@ -1,5 +1,3 @@
-# To-Do Application
-
 # 📋 Collaborative To-Do List Application
 
 ## 👨‍💻 Team Members
