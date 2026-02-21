@@ -1,3 +1,8 @@
+/**
+ * User domain model representing registered users
+ * Stores user credentials and account information
+ * Used for authentication and task ownership
+ */
 export class User {
   constructor(id, name, password, createdDate) {
     this.id = id;
