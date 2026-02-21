@@ -1,8 +1,21 @@
+/**
+ * TaskService Integration Tests
+ * Tests task CRUD operations, status transitions, and authorization
+ * Uses dependency injection to mock TaskDAO for isolated testing
+ * Validates business logic, deleted task protection, and user authorization
+ * Status IDs: 1=ready_to_pick, 2=in_progress, 3=blocked, 4=completed, 5=deleted
+ */
 import { describe, test, expect } from '@jest/globals';
 import { TaskService } from '../src/services/TaskService.js';
 
 describe('TaskService Integration Tests', () => {
+  // Test suite for task creation functionality
   describe('addTask', () => {
+    /**
+     * TC-007: Validate task creation with correct initial status
+     * Ensures new tasks are created with ready_to_pick status (1)
+     * Verifies all task properties are set correctly
+     */
     test('TC-007: should add task with correct status', async () => {
       const taskService = new TaskService();
       
@@ -26,7 +39,13 @@ describe('TaskService Integration Tests', () => {
     });
   });
 
+  // Test suite for task name editing functionality
   describe('editTaskName', () => {
+    /**
+     * TC-010: Validate successful task name update
+     * Mocks task owned by current user with non-deleted status
+     * Verifies task name is updated correctly
+     */
     test('TC-010: should edit own task successfully', async () => {
       const taskService = new TaskService();
       
@@ -41,6 +60,11 @@ describe('TaskService Integration Tests', () => {
       expect(result.taskName).toBe('Updated name');
     });
 
+    /**
+     * TC-011: Validate non-existent task rejection
+     * Mocks TaskDAO returning null for task lookup
+     * Ensures proper error handling for missing tasks
+     */
     test('TC-011: should throw error for non-existent task', async () => {
       const taskService = new TaskService();
       
@@ -53,6 +77,11 @@ describe('TaskService Integration Tests', () => {
         .rejects.toThrow('Task not found or unauthorized');
     });
 
+    /**
+     * TC-012: Validate authorization check for task editing
+     * Mocks task owned by different user (userId=2)
+     * Ensures users cannot edit tasks they don't own
+     */
     test('TC-012: should throw error for another user\'s task', async () => {
       const taskService = new TaskService();
       
@@ -65,6 +94,11 @@ describe('TaskService Integration Tests', () => {
         .rejects.toThrow('Task not found or unauthorized');
     });
 
+    /**
+     * Validate deleted task protection for editing
+     * Mocks task with deleted status (statusId=5)
+     * Ensures deleted tasks cannot be modified
+     */
     test('NEW: should throw error for deleted task', async () => {
       const taskService = new TaskService();
       
@@ -78,7 +112,13 @@ describe('TaskService Integration Tests', () => {
     });
   });
 
+  // Test suite for task resume/start functionality
   describe('resumeTask', () => {
+    /**
+     * TC-013: Validate starting task from ready_to_pick status
+     * Mocks task with ready_to_pick status (1)
+     * Verifies status changes to in_progress (2)
+     */
     test('TC-013: should start task from ready to pick', async () => {
       const taskService = new TaskService();
       
@@ -93,6 +133,11 @@ describe('TaskService Integration Tests', () => {
       expect(result.statusId).toBe(2);
     });
 
+    /**
+     * TC-014: Validate resuming task from blocked status
+     * Mocks task with blocked status (3)
+     * Verifies status changes to in_progress (2)
+     */
     test('TC-014: should resume task from blocked', async () => {
       const taskService = new TaskService();
       
@@ -107,6 +152,11 @@ describe('TaskService Integration Tests', () => {
       expect(result.statusId).toBe(2);
     });
 
+    /**
+     * TC-015: Validate resume restriction for completed tasks
+     * Mocks task with completed status (4)
+     * Ensures completed tasks cannot be resumed
+     */
     test('TC-015: should throw error for completed task', async () => {
       const taskService = new TaskService();
       
@@ -119,6 +169,11 @@ describe('TaskService Integration Tests', () => {
         .rejects.toThrow('Task can only be resumed from Ready to Pick or Blocked status');
     });
 
+    /**
+     * Validate deleted task protection for resume
+     * Mocks task with deleted status (5)
+     * Ensures deleted tasks cannot be resumed
+     */
     test('NEW: should throw error for deleted task', async () => {
       const taskService = new TaskService();
       
@@ -132,7 +187,13 @@ describe('TaskService Integration Tests', () => {
     });
   });
 
+  // Test suite for marking tasks as completed
   describe('markCompleted', () => {
+    /**
+     * TC-017: Validate marking task as completed
+     * Mocks task with in_progress status (2)
+     * Verifies status changes to completed (4)
+     */
     test('TC-017: should mark task as completed', async () => {
       const taskService = new TaskService();
       
@@ -147,6 +208,11 @@ describe('TaskService Integration Tests', () => {
       expect(result.statusId).toBe(4);
     });
 
+    /**
+     * TC-019: Validate authorization for marking completed
+     * Mocks task owned by different user
+     * Ensures users cannot complete tasks they don't own
+     */
     test('TC-019: should throw error for another user\'s task', async () => {
       const taskService = new TaskService();
       
@@ -159,6 +225,11 @@ describe('TaskService Integration Tests', () => {
         .rejects.toThrow('Task not found or unauthorized');
     });
 
+    /**
+     * Validate deleted task protection for completion
+     * Mocks task with deleted status (5)
+     * Ensures deleted tasks cannot be marked as completed
+     */
     test('NEW: should throw error for deleted task', async () => {
       const taskService = new TaskService();
       
@@ -172,7 +243,13 @@ describe('TaskService Integration Tests', () => {
     });
   });
 
+  // Test suite for marking tasks as blocked
   describe('markBlocked', () => {
+    /**
+     * Validate deleted task protection for blocking
+     * Mocks task with deleted status (5)
+     * Ensures deleted tasks cannot be marked as blocked
+     */
     test('NEW: should throw error for deleted task', async () => {
       const taskService = new TaskService();
       
@@ -186,7 +263,13 @@ describe('TaskService Integration Tests', () => {
     });
   });
 
+  // Test suite for task deletion (soft delete)
   describe('deleteTask', () => {
+    /**
+     * TC-022: Validate soft delete functionality
+     * Mocks task owned by current user
+     * Verifies status changes to deleted (5)
+     */
     test('TC-022: should delete own task', async () => {
       const taskService = new TaskService();
       
@@ -201,6 +284,11 @@ describe('TaskService Integration Tests', () => {
       expect(result.statusId).toBe(5);
     });
 
+    /**
+     * TC-024: Validate deletion of non-existent task
+     * Mocks TaskDAO returning null
+     * Ensures proper error handling for missing tasks
+     */
     test('TC-024: should throw error for non-existent task', async () => {
       const taskService = new TaskService();
       
@@ -214,7 +302,13 @@ describe('TaskService Integration Tests', () => {
     });
   });
 
+  // Test suite for retrieving user's tasks
   describe('getMyTasks', () => {
+    /**
+     * TC-025: Validate task retrieval with complete information
+     * Mocks tasks with all fields including username, status, category, dates
+     * Verifies all fields are returned correctly from joined query
+     */
     test('TC-025: should return user tasks with all fields', async () => {
       const taskService = new TaskService();
       
@@ -253,6 +347,11 @@ describe('TaskService Integration Tests', () => {
       expect(result[0].updated_date).toBeDefined();
     });
 
+    /**
+     * TC-026: Validate empty result handling
+     * Mocks TaskDAO returning empty array
+     * Ensures proper handling when user has no tasks
+     */
     test('TC-026: should return empty array when no tasks', async () => {
       const taskService = new TaskService();
       
@@ -266,6 +365,11 @@ describe('TaskService Integration Tests', () => {
       expect(result).toHaveLength(0);
     });
 
+    /**
+     * Validate task ordering by updated_date DESC
+     * Mocks tasks with different update timestamps
+     * Ensures most recently updated tasks appear first
+     */
     test('NEW: should return tasks ordered by updated_date DESC', async () => {
       const taskService = new TaskService();
       
@@ -294,7 +398,13 @@ describe('TaskService Integration Tests', () => {
     });
   });
 
+  // Test suite for filtering tasks by status
   describe('filterByStatus', () => {
+    /**
+     * TC-028: Validate status-based filtering with complete fields
+     * Mocks filtered tasks with all joined data
+     * Verifies filtering returns correct tasks with all information
+     */
     test('TC-028: should filter tasks with all fields', async () => {
       const taskService = new TaskService();
       
@@ -321,7 +431,13 @@ describe('TaskService Integration Tests', () => {
     });
   });
 
+  // Test suite for filtering tasks by category
   describe('filterByCategory', () => {
+    /**
+     * TC-032: Validate category-based filtering with complete fields
+     * Mocks filtered tasks by category (work/leisure)
+     * Verifies filtering returns correct tasks with all information
+     */
     test('TC-032: should filter by category with all fields', async () => {
       const taskService = new TaskService();
       

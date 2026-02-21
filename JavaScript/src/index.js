@@ -1,3 +1,8 @@
+/**
+ * Command-line interface for collaborative to-do application
+ * Provides user authentication and task management functionality
+ * Uses readline-sync for synchronous CLI input/output
+ */
 import readlineSync from 'readline-sync';
 import { AuthService } from './services/AuthService.js';
 import { TaskService } from './services/TaskService.js';
@@ -7,8 +12,14 @@ const authService = new AuthService();
 const taskService = new TaskService();
 const userDAO = new UserDAO();
 
+// Stores currently authenticated user session
 let currentUser = null;
 
+/**
+ * Display main authentication menu
+ * Presents options for user registration, login, and application exit
+ * @returns {string} User's menu choice
+ */
 function showMainMenu() {
   console.log('\n=== Collaborative To-Do ===');
   console.log('1) Register');
@@ -18,6 +29,12 @@ function showMainMenu() {
   return choice;
 }
 
+/**
+ * Handle user registration with validation
+ * Validates username and password are non-empty
+ * Checks for duplicate usernames before creating account
+ * Displays success message or error if registration fails
+ */
 async function handleRegister() {
   console.log('\n--- Register ---');
   const username = readlineSync.question('Username: ');
@@ -42,6 +59,12 @@ async function handleRegister() {
   }
 }
 
+/**
+ * Handle user login and transition to task menu
+ * Validates credentials against database
+ * Sets currentUser session and displays task management interface
+ * Returns to main menu on logout
+ */
 async function handleLogin() {
   console.log('\n--- Login ---');
   const username = readlineSync.question('Username: ');
@@ -67,6 +90,12 @@ async function handleLogin() {
   }
 }
 
+/**
+ * Display task management menu for authenticated user
+ * Provides CRUD operations: add, edit, resume, complete, block, delete tasks
+ * Includes view and filter functionality for task organization
+ * Loops until user chooses to logout
+ */
 function showTaskMenu() {
   return new Promise(async (resolve) => {
     let running = true;
@@ -121,6 +150,12 @@ function showTaskMenu() {
   });
 }
 
+/**
+ * Add new task with category selection
+ * Creates task with 'ready_to_pick' status (statusId=1)
+ * Validates task name is non-empty
+ * Assigns task to current user and selected category (1=Work, 2=Leisure)
+ */
 async function handleAddTask() {
   const taskName = readlineSync.question('Task name: ');
   
@@ -140,6 +175,12 @@ async function handleAddTask() {
   }
 }
 
+/**
+ * Edit existing task name
+ * Validates user owns the task before allowing modification
+ * Prevents editing of deleted tasks (statusId=5)
+ * Updates task name and timestamp in database
+ */
 async function handleEditTask() {
   const taskId = readlineSync.questionInt('Task ID: ');
   const newName = readlineSync.question('New task name: ');
@@ -157,6 +198,12 @@ async function handleEditTask() {
   }
 }
 
+/**
+ * Resume task to in-progress status
+ * Changes task status from 'ready_to_pick' (1) or 'blocked' (3) to 'in_progress' (2)
+ * Validates user authorization and prevents resuming deleted tasks
+ * Used when user starts working on a task
+ */
 async function handleResumeTask() {
   const taskId = readlineSync.questionInt('Task ID: ');
   
@@ -168,6 +215,12 @@ async function handleResumeTask() {
   }
 }
 
+/**
+ * Mark task as completed
+ * Changes task status to 'completed' (statusId=4)
+ * Validates user owns task and prevents modifying deleted tasks
+ * Updates timestamp to track completion time
+ */
 async function handleMarkCompleted() {
   const taskId = readlineSync.questionInt('Task ID: ');
   
@@ -179,6 +232,12 @@ async function handleMarkCompleted() {
   }
 }
 
+/**
+ * Mark task as blocked
+ * Changes task status to 'blocked' (statusId=3)
+ * Used when task cannot proceed due to dependencies or issues
+ * Validates authorization and prevents modifying deleted tasks
+ */
 async function handleMarkBlocked() {
   const taskId = readlineSync.questionInt('Task ID: ');
   
@@ -190,6 +249,12 @@ async function handleMarkBlocked() {
   }
 }
 
+/**
+ * Soft delete task
+ * Changes task status to 'deleted' (statusId=5) without removing from database
+ * Deleted tasks are excluded from active task views
+ * Once deleted, tasks cannot be modified or restored
+ */
 async function handleDeleteTask() {
   const taskId = readlineSync.questionInt('Task ID: ');
   
@@ -201,6 +266,13 @@ async function handleDeleteTask() {
   }
 }
 
+/**
+ * View all active tasks for current user
+ * Displays tasks with full details: ID, username, task name, status, category
+ * Shows creation and last update timestamps
+ * Excludes deleted tasks from display
+ * Tasks ordered by most recently updated first
+ */
 async function handleViewTasks() {
   try {
     const tasks = await taskService.getMyTasks(currentUser.id);
@@ -220,6 +292,12 @@ async function handleViewTasks() {
   }
 }
 
+/**
+ * Filter tasks by status or category
+ * Status options: 1=Ready to Pick, 2=In Progress, 3=Blocked, 4=Completed
+ * Category options: 1=Work, 2=Leisure
+ * Displays filtered results with full task details
+ */
 async function handleFilterTasks() {
   console.log('Filter by: 1=Status, 2=Category');
   const filterType = readlineSync.question('Choose: ');
@@ -243,6 +321,12 @@ async function handleFilterTasks() {
   }
 }
 
+/**
+ * Display tasks with formatted output
+ * Shows task ID, username, task name, status, category
+ * Includes formatted creation and update timestamps
+ * Used by view and filter operations
+ */
 function displayTasks(tasks) {
   if (tasks.length === 0) {
     console.log('No tasks found.');
@@ -257,6 +341,12 @@ function displayTasks(tasks) {
   });
 }
 
+/**
+ * Application entry point
+ * Initializes CLI and displays main menu loop
+ * Handles user authentication flow (register/login/exit)
+ * Catches and logs any unhandled errors
+ */
 async function main() {
   console.log('Welcome to Collaborative To-Do Application!');
   
