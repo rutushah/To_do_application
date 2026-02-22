@@ -44,10 +44,11 @@ The application uses a PostgreSQL database consisting of the following entities:
 - Status  
 
 Task status lifecycle includes:
-- NEW  
-- MODIFIED  
-- COMPLETED  
-- DELETED  
+- Ready to Pick  
+- In Progress  
+- Blocked  
+- Completed
+- Deleted  
 
 ---
 
