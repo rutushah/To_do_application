@@ -48,7 +48,11 @@ Task status lifecycle includes:
 - In Progress  
 - Blocked  
 - Completed
-- Deleted  
+- Deleted
+
+Task Category includes:
+- Work  
+- Leisure 
 
 ---
 
