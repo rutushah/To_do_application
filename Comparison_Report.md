@@ -422,10 +422,44 @@ JavaScript uses automatic garbage collection optimized for short-lived objects. 
 
 Java's class-based inheritance provides clear hierarchies and interfaces:
 ```java
-public interface TaskDAO {
-    Task createTask(String taskName, int statusId, int userId, int categoryId);
-    List<Task> listByUser(int userId);
-}
+public Task createTask(String taskName, int statusId, int userId, int categoryId) throws Exception {
+        String sql = """
+            INSERT INTO tasks (task_name, status_id, user_id, category_id, created_date, updated_date)
+            VALUES (?, ?, ?, ?, NOW(), NOW())
+            RETURNING id, task_name, created_date, updated_date
+        """;
+
+        try (Connection connection = DB.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setString(1, taskName);
+            preparedStatement.setInt(2, statusId);
+            preparedStatement.setInt(3, userId);
+            preparedStatement.setInt(4, categoryId);
+
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                rs.next();
+
+                // For create we don't have JOIN names, so return minimal Task object
+                // You can just return null if you don't need the created Task instance.
+                Timestamp createdTs = rs.getTimestamp("created_date");
+                Timestamp updatedTs = rs.getTimestamp("updated_date");
+
+                LocalDateTime created = createdTs != null ? createdTs.toLocalDateTime() : null;
+                LocalDateTime updated = updatedTs != null ? updatedTs.toLocalDateTime() : null;
+
+                return new Task(
+                        rs.getInt("id"),
+                        rs.getString("task_name"),
+                        null,       // status_name (not joined)
+                        null,       // username (not joined)
+                        null,       // category_name (not joined)
+                        created,
+                        updated
+                );
+            }
+        }
+    }
 ```
 
 JavaScript's prototype-based inheritance with ES6 classes offers flexibility:
@@ -442,9 +476,13 @@ Both languages support functional programming, but with different emphasis:
 
 **Java (Streams API):**
 ```java
-List<Task> completedTasks = tasks.stream()
-    .filter(t -> t.getStatusName().equals("completed"))
-    .collect(Collectors.toList());
+    public void markCompleted(int taskId, int loggedInUserId) throws Exception {
+        if (!taskDao.isTaskOwnedBy(taskId, loggedInUserId))
+            throw new IllegalArgumentException("You are not allowed to modify this task.");
+
+        int completed = statusDao.getIdByName("completed");
+        taskDao.markTaskStatus(taskId, completed);
+    }
 ```
 
 **JavaScript (Array Methods):**
