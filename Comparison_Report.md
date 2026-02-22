@@ -526,13 +526,14 @@ Haverbeke, M. (2018). *Eloquent JavaScript* (3rd ed.). No Starch Press.
 
 | Metric | Java | JavaScript |
 |--------|------|------------|
-| Total Lines of Code | ~1,200 | ~800 |
-| Number of Classes/Modules | 12 | 8 |
-| Test Cases | 15 | 27 |
-| Dependencies | 4 | 4 |
+| Total Lines of Code | ~1,500 | ~800 |
+| Number of Classes/Modules | 14 | 8 |
+| Testing Framework | JUnit | Node.js Test Suite |
+| Dependencies | JDBC, PostgreSQL Drive | pg, Node Modules |
 | Average Method Length | 15 lines | 10 lines |
-| Database Connection Model | Per-operation | Connection pool |
-| Concurrency Model | Multi-threaded | Asynchronous |
+| Database Connection Model | Per-operation JDBC Connection | Connection pool |
+| Concurrency Model | Transaction-level Concurrency | Asynchronous |
 | Type System | Static | Dynamic |
 | Compilation Required | Yes | No |
-| Development Time | ~40 hours | ~30 hours |
+| Development Time | ~35 hours | ~30 hours |
+|Implementation Effort| Higher due to strict typing | Lower due to flexible syntax | 
