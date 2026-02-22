@@ -64,4 +64,6 @@ Task status lifecycle includes:
 ## 🔌 JDBC Connection String
 
 ```bash
-jdbc:postgresql://localhost:5432/todo_app
+- jdbc:postgresql://localhost:5432/todo_app
+- **username:** todoappuser
+- **password:** 'todo_pwd'
